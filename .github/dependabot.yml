@@ -1,0 +1,16 @@
+# 의존성 업데이트. 패치는 AI 가 병합해도 된다(CLAUDE.md 2절). 그 밖은 PR 에서 판단.
+# npm·pip 를 쓰게 되면 아래 주석을 푼다.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  # - package-ecosystem: npm
+  #   directory: /
+  #   schedule:
+  #     interval: weekly
+  # - package-ecosystem: pip
+  #   directory: /
+  #   schedule:
+  #     interval: weekly

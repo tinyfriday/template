@@ -1,0 +1,72 @@
+# PR 과 main 푸시마다 린트·테스트·빌드.
+# 프로젝트 종류를 파일로 알아낸다. 아무것도 없으면 문서 검사만 하고 통과한다(빈 템플릿도 초록).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    name: 프로젝트 종류 알아내기
+    runs-on: ubuntu-latest
+    outputs:
+      node: ${{ steps.d.outputs.node }}
+      python: ${{ steps.d.outputs.python }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: d
+        run: |
+          echo "node=$([ -f package.json ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "python=$([ -f pyproject.toml ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  docs:
+    name: 문서 틀 검사
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 필수 문서가 있는가
+        run: |
+          missing=0
+          for f in README.md LICENSE SPEC.md ACCEPTANCE.md TASKS.md HANDOFF.md SECURITY.md; do
+            if [ ! -f "$f" ]; then echo "::error file=$f::$f 가 없습니다"; missing=1; fi
+          done
+          exit $missing
+      - name: README 에 알려진 한계 절이 있는가
+        run: grep -q '^## 알려진 한계' README.md || { echo "::error file=README.md::'## 알려진 한계' 절이 없습니다"; exit 1; }
+
+  node:
+    name: Node (package.json 이 있을 때)
+    runs-on: ubuntu-latest
+    needs: detect
+    if: ${{ needs.detect.outputs.node == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint --if-present
+      - run: npm test --if-present
+      - run: npm run build --if-present
+
+  python:
+    name: Python (pyproject.toml 이 있을 때)
+    runs-on: ubuntu-latest
+    needs: detect
+    if: ${{ needs.detect.outputs.python == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]" || pip install -e .
+      - run: |
+          if pip show ruff >/dev/null 2>&1; then ruff check .; fi
+      - run: |
+          if [ -d tests ]; then pip install pytest && pytest -q; else echo "tests/ 없음 — 건너뜀"; fi
