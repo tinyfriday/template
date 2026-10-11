@@ -1,0 +1,37 @@
+# main 병합 → GitHub Pages 배포. 웹 도구용.
+# 켜는 법: 저장소 Settings → Pages → Source 를 "GitHub Actions" 로, 그리고 Variables 에 PAGES_ENABLED=true.
+# 배포할 폴더는 PAGES_DIR 변수(기본 site). 빌드가 필요하면 build 단계를 채운다.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ vars.PAGES_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: build
+        run: |
+          if [ -f package.json ]; then npm ci && npm run build --if-present; fi
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ vars.PAGES_DIR || 'site' }}
+      - id: deployment
+        uses: actions/deploy-pages@v4
