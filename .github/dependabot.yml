@@ -6,6 +6,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      # 워크플로마다 따로 PR 이 오지 않게 액션 업데이트를 PR 하나로 묶는다.
+      actions:
+        patterns: ["*"]
   # - package-ecosystem: npm
   #   directory: /
   #   schedule:
